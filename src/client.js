@@ -780,6 +780,17 @@ class Client extends EventEmitter {
 
         return request(options, (error, res, value) => {
             if (error) {
+                if (error && error.id==='api.context.session_expired.app_error'){
+                    this.reconnect();
+                    setTimeout(
+                        () => {
+                            this.logger.info('Recall after reconnect');
+                            _apiCall(method, path, params, callback, callback_params);
+                        },
+                        3000,
+                    )
+                    return;
+                }
                 if (callback) {
                     return callback({ id: null, error: error.errno }, {}, safe_callback_params);
                 }
