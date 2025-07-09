@@ -780,17 +780,6 @@ class Client extends EventEmitter {
 
         return request(options, (error, res, value) => {
             if (error) {
-                if (error && error.id==='api.context.session_expired.app_error'){
-                    this.reconnect();
-                    setTimeout(
-                        () => {
-                            this.logger.info('Recall after reconnect');
-                            _apiCall(method, path, params, callback, callback_params);
-                        },
-                        3000,
-                    )
-                    return;
-                }
                 if (callback) {
                     return callback({ id: null, error: error.errno }, {}, safe_callback_params);
                 }
@@ -798,6 +787,20 @@ class Client extends EventEmitter {
                 if ((res.statusCode === 200) || (res.statusCode === 201)) {
                     const objectValue = (typeof value === 'string') ? JSON.parse(value) : value;
                     return callback(objectValue, res.headers, safe_callback_params);
+                }
+                if (res.statusCode === 401) {
+                    const objectValue = (typeof value === 'string') ? JSON.parse(value) : value;
+                    if (objectValue.id === 'api.context.session_expired.app_error') {
+                        this.reconnect();
+                        setTimeout(
+                            () => {
+                                this.logger.info('Recall after reconnect');
+                                this._apiCall(method, path, params, callback, callback_params);
+                            },
+                            3000,
+                        )
+                        return;
+                    }
                 }
                 return callback({ id: null, error: `API response: ${res.statusCode} ${JSON.stringify(value)}` }, res.headers, safe_callback_params);
             }
